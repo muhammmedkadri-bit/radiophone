@@ -1,0 +1,254 @@
+:root {
+  --bg: #05070a;
+  --panel-bg: rgba(14, 20, 30, 0.7);
+  --cyan: #00f0ff;
+  --cyan-glow: rgba(0, 240, 255, 0.4);
+  --amber: #ffb703;
+  --amber-glow: rgba(255, 183, 3, 0.4);
+  --green: #00f59b;
+  --text-primary: #ffffff;
+  --text-muted: #7b8a99;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-tech: 'Orbitron', 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.background-ambient {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.04) 0%, transparent 60%);
+  transition: background 0.8s ease;
+  z-index: 1;
+}
+
+body.is-active .background-ambient {
+  background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.12) 0%, rgba(255, 183, 3, 0.03) 40%, transparent 75%);
+}
+
+.minimal-app {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2.5rem 1.5rem;
+}
+
+/* Header */
+.minimal-header {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.brand-title {
+  font-family: var(--font-tech);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.brand-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+
+/* Center Single Power Button */
+.power-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2rem;
+}
+
+.power-button {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.power-button:active {
+  transform: scale(0.94);
+}
+
+.power-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.8);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.power-inner {
+  position: relative;
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #131a26, #090e15);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.05);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.power-icon {
+  width: 58px;
+  height: 58px;
+  color: var(--text-muted);
+  transition: all 0.4s ease;
+}
+
+/* ACTIVE / ON STATE */
+.power-button.active .power-ring {
+  border-color: var(--cyan);
+  box-shadow: 0 0 35px var(--cyan-glow), inset 0 0 20px var(--cyan-glow);
+  animation: breathingGlow 3s ease-in-out infinite;
+}
+
+.power-button.active .power-inner {
+  background: linear-gradient(145deg, #0d2230, #06111a);
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 12px 35px rgba(0, 240, 255, 0.25), inset 0 0 15px rgba(0, 240, 255, 0.15);
+}
+
+.power-button.active .power-icon {
+  color: var(--cyan);
+  filter: drop-shadow(0 0 12px var(--cyan));
+}
+
+@keyframes breathingGlow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 30px var(--cyan-glow), inset 0 0 15px var(--cyan-glow);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 50px rgba(0, 240, 255, 0.6), inset 0 0 25px rgba(0, 240, 255, 0.3);
+  }
+}
+
+/* Status Label */
+.power-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all 0.3s ease;
+}
+
+.power-button.active + .power-status {
+  color: var(--cyan);
+}
+
+.power-button.active + .power-status .status-indicator {
+  background: var(--green);
+  box-shadow: 0 0 12px var(--green);
+  animation: statusPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Footer */
+.minimal-footer {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #4a5768;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apple-direct-link {
+  color: var(--cyan);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+  font-weight: 500;
+}
+
+.apple-direct-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.sep {
+  color: #2b3543;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .power-button {
+    width: 156px;
+    height: 156px;
+  }
+  .power-inner {
+    width: 128px;
+    height: 128px;
+  }
+  .power-icon {
+    width: 48px;
+    height: 48px;
+  }
+  .brand-title {
+    font-size: 1.35rem;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "radiophone",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
+    "express": "^5.2.1",
+    "lamejs": "^1.2.1"
+  }
+}
