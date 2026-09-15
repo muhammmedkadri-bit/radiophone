@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Radiophone</title>
-  <meta name="description" content="Radiophone — Canlı Infrasound Radyo">
-  
-  <!-- Apple iOS Native Media Player & PWA Configuration -->
+  <meta name="description" content="Radiophone — 7.83 Hz Schumann Resonance Canlı Radyo">
+
+  <!-- iOS PWA / Native Media Player -->
   <meta name="apple-mobile-web-app-title" content="Radiophone">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,51 +15,53 @@
   <link rel="icon" type="image/png" href="/icon-192.png">
   <link rel="manifest" href="/manifest.json">
 
-  <!-- Typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+  <!-- NO external font requests — system fonts only for instant load -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="background-ambient"></div>
 
   <main class="minimal-app">
-    <!-- Minimal Header -->
     <header class="minimal-header">
       <h1 class="brand-title">RADIOPHONE</h1>
-      <p class="brand-sub">7.83 Hz INFRASOUND • CANLI RADYO</p>
+      <p class="brand-sub">7.83 Hz SCHUMANN • CANLI RADYO</p>
     </header>
 
-    <!-- Center Single Power Button -->
     <div class="power-container">
       <button class="power-button" id="powerBtn" aria-label="Radyoyu Aç / Kapat">
         <div class="power-ring"></div>
         <div class="power-inner">
-          <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
             <line x1="12" y1="2" x2="12" y2="12"></line>
           </svg>
         </div>
       </button>
 
-      <!-- Live / Off Status -->
       <div class="power-status" id="powerStatus">
-        <span class="status-indicator"></span>
+        <span class="status-indicator" id="statusDot"></span>
         <span class="status-label" id="statusLabel">DOKUN VE BAŞLAT</span>
       </div>
     </div>
 
-    <!-- Minimalist Footer -->
     <footer class="minimal-footer">
       <a href="/hls/live.m3u8" class="apple-direct-link" id="directLink">Apple Oynatıcıda Aç</a>
       <span class="sep">•</span>
-      <span id="footerInfo">Canlı HLS • Tam Sessiz</span>
+      <span id="footerInfo">Canlı HLS • 7.83 Hz</span>
     </footer>
   </main>
 
-  <!-- iOS AVPlayer Native Audio Element with Preloaded HLS Source -->
-  <audio id="radioAudio" title="Radiophone" preload="auto" playsinline>
+  <!--
+    Native audio element — HLS source for AVPlayer/Safari.
+    'title' appears in iOS lock screen / control center.
+    'playsinline' prevents fullscreen takeover on iOS.
+  -->
+  <audio id="radioAudio"
+         title="Radiophone"
+         preload="none"
+         playsinline
+         x-webkit-airplay="allow">
     <source src="/hls/live.m3u8" type="application/vnd.apple.mpegurl">
   </audio>
 

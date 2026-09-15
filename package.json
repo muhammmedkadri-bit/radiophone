@@ -1,7 +1,7 @@
 {
   "name": "radiophone",
   "version": "1.0.0",
-  "description": "",
+  "description": "Silent infrasound live radio — 7.83 Hz Schumann Resonance HLS stream",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
@@ -12,8 +12,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@breezystack/lamejs": "^1.2.7",
-    "express": "^5.2.1",
-    "lamejs": "^1.2.1"
+    "express": "^4.21.2"
   }
 }
