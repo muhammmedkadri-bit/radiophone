@@ -55,8 +55,8 @@ async function main() {
     next();
   });
 
-  // 2. AAC Segments
-  app.get('/hls/segment_:id.aac', (req, res) => {
+  // 2. MP3 Segments (HLS with real inaudible audio)
+  app.get('/hls/segment_:id.mp3', (req, res) => {
     streamManager.handleHlsSegment(req, res, req.params.id);
   });
 

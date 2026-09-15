@@ -38,7 +38,7 @@ class RadioStreamManager extends EventEmitter {
     }
 
     res.writeHead(200, {
-      'Content-Type': 'audio/aac',
+      'Content-Type': 'audio/mpeg',
       'Content-Length': buffer.length,
       'Accept-Ranges': 'bytes',
       'Cache-Control': 'public, max-age=60',
