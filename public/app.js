@@ -3,9 +3,12 @@
  *
  * Responsibilities:
  *  1. Power button → start/stop HLS playback
- *  2. iOS MediaSession → lock screen / Control Center appearance as LIVE RADIO
- *  3. Autoplay watchdog → resume after audio interruptions (calls, notifications)
- *  4. Background autoplay → if user was playing, resume when returning to tab
+ *  2. Dual-engine playback:
+ *     - Native AVPlayer HLS on Safari (iOS & macOS) for native lock-screen LIVE radio
+ *     - Hls.js on Chrome / Firefox / Edge / Android for full cross-browser support
+ *     - Direct /stream fallback
+ *  3. iOS MediaSession → lock screen / Control Center appearance as LIVE RADIO
+ *  4. Autoplay watchdog → resume after audio interruptions (calls, notifications)
  */
 
 'use strict';
@@ -16,9 +19,13 @@ const statusDot   = document.getElementById('statusDot');
 const footerInfo  = document.getElementById('footerInfo');
 const audio       = document.getElementById('radioAudio');
 
-let wantsPlay = false;  // user intent — true after pressing Play, false after Stop
+const HLS_URL     = '/hls/live.m3u8';
+let hlsInstance   = null;
+let wantsPlay     = false;
+let isInitialized = false;
+let retryTimer    = null;
 
-// ── MediaSession (iOS Control Center / lock screen) ─────────────────────────
+// ── MediaSession (iOS Control Center / Lock Screen) ──────────────────────────
 function setupMediaSession() {
   if (!('mediaSession' in navigator)) return;
 
@@ -33,7 +40,7 @@ function setupMediaSession() {
   });
 
   // Remove seek controls → iOS renders Apple Music "LIVE" badge instead
-  ['seekbackward','seekforward','seekto','previoustrack','nexttrack'].forEach(a => {
+  ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack'].forEach(a => {
     try { navigator.mediaSession.setActionHandler(a, null); } catch (_) {}
   });
 
@@ -44,34 +51,91 @@ function setupMediaSession() {
 
 setupMediaSession();
 
-// ── Playback control ─────────────────────────────────────────────────────────
+// ── Stream Initialization (Safari Native vs Hls.js vs Direct) ────────────────
+function initStream() {
+  if (isInitialized) return;
+  isInitialized = true;
+
+  // 1. Safari (iOS & macOS) — Native AVPlayer HLS support
+  if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+    console.log('[Radiophone] Using native Safari HLS engine');
+    audio.src = HLS_URL;
+  }
+  // 2. Chrome / Firefox / Edge / Android — Hls.js MSE support
+  else if (window.Hls && Hls.isSupported()) {
+    console.log('[Radiophone] Using Hls.js engine');
+    hlsInstance = new Hls({
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBufferLength: 30
+    });
+    hlsInstance.loadSource(HLS_URL);
+    hlsInstance.attachMedia(audio);
+
+    hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+      console.warn('[Radiophone] Hls.js error:', data.type, data.details);
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            console.log('[Radiophone] Network error, recovering...');
+            hlsInstance.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            console.log('[Radiophone] Media error, recovering...');
+            hlsInstance.recoverMediaError();
+            break;
+          default:
+            console.log('[Radiophone] Unrecoverable error, destroying and restarting...');
+            hlsInstance.destroy();
+            hlsInstance = null;
+            isInitialized = false;
+            if (wantsPlay) setTimeout(startRadio, 2000);
+            break;
+        }
+      }
+    });
+  }
+  // 3. Fallback for any other environment: direct stream
+  else {
+    console.log('[Radiophone] Using direct stream fallback');
+    audio.src = '/stream';
+  }
+}
+
+// ── Playback Control ─────────────────────────────────────────────────────────
 async function startRadio() {
   wantsPlay = true;
   setUI('connecting');
+  clearTimeout(retryTimer);
 
-  // Force reload if network went idle
-  if (audio.networkState === HTMLMediaElement.NETWORK_EMPTY ||
-      audio.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
-    audio.load();
-  }
+  initStream();
 
   try {
-    await audio.play();
-    // setUI('active') is handled by the 'playing' event listener
+    const p = audio.play();
+    if (p !== undefined) {
+      await p;
+    }
   } catch (err) {
-    // AutoPlay blocked or interrupted — watchdog will retry
-    console.warn('[Radiophone] play() deferred:', err.message);
-    setUI('idle');
+    console.warn('[Radiophone] play() error:', err.message);
+    // If user intended to play, keep connecting state and retry
+    if (wantsPlay) {
+      retryTimer = setTimeout(() => {
+        if (wantsPlay && audio.paused) {
+          audio.play().catch(() => {});
+        }
+      }, 1500);
+    }
   }
 }
 
 function stopRadio() {
   wantsPlay = false;
+  clearTimeout(retryTimer);
   audio.pause();
   setUI('idle');
 }
 
-// ── UI state ─────────────────────────────────────────────────────────────────
+// ── UI State ─────────────────────────────────────────────────────────────────
 function setUI(state) {
   if (state === 'active') {
     document.body.classList.add('is-active');
@@ -81,6 +145,7 @@ function setUI(state) {
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   } else if (state === 'connecting') {
     statusLabel.textContent = 'BAĞLANILIYOR...';
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
   } else {
     document.body.classList.remove('is-active');
     powerBtn.classList.remove('active');
@@ -96,51 +161,64 @@ powerBtn.addEventListener('click', () => {
   else            stopRadio();
 });
 
-// ── Audio element events ─────────────────────────────────────────────────────
-audio.addEventListener('playing', () => setUI('active'));
+// ── Audio Element Events ─────────────────────────────────────────────────────
+audio.addEventListener('playing', () => {
+  if (wantsPlay) setUI('active');
+});
 
 audio.addEventListener('pause', () => {
-  // Distinguish user-initiated pause from OS interruption
   if (!wantsPlay) setUI('idle');
 });
 
-audio.addEventListener('error', () => {
-  if (wantsPlay) {
+audio.addEventListener('waiting', () => {
+  if (wantsPlay && !powerBtn.classList.contains('active')) {
     setUI('connecting');
-    setTimeout(tryResume, 2000);
   }
 });
 
 audio.addEventListener('stalled', () => {
-  if (wantsPlay) setTimeout(tryResume, 3000);
+  if (wantsPlay) setTimeout(tryResume, 2000);
 });
 
-audio.addEventListener('waiting', () => {
-  if (wantsPlay) setUI('connecting');
+audio.addEventListener('error', (e) => {
+  console.warn('[Radiophone] Audio element error:', audio.error);
+  if (wantsPlay) {
+    setUI('connecting');
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(() => {
+      if (wantsPlay) {
+        if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+          audio.src = HLS_URL + '?t=' + Date.now();
+          audio.load();
+        } else if (hlsInstance) {
+          hlsInstance.loadSource(HLS_URL + '?t=' + Date.now());
+        }
+        audio.play().catch(() => {});
+      }
+    }, 2000);
+  }
 });
 
-// ── Watchdog: resume after interruptions ─────────────────────────────────────
+// ── Watchdog: Resume After Interruptions (Calls, Lock Screen, Tab Switch) ─────
 async function tryResume() {
   if (!wantsPlay || !audio.paused) return;
   try {
     await audio.play();
-  } catch (_) {
-    // Will retry via next watchdog tick
-  }
+  } catch (_) {}
 }
 
-// Visibility change: user returns to tab / app
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && wantsPlay) tryResume();
 });
 
-// Window regains focus (e.g. after notification dismissal)
-window.addEventListener('focus', () => { if (wantsPlay) tryResume(); });
+window.addEventListener('focus', () => {
+  if (wantsPlay) tryResume();
+});
 
-// pageshow fires when navigating back (bfcache restore on Safari)
-window.addEventListener('pageshow', () => { if (wantsPlay) tryResume(); });
+window.addEventListener('pageshow', () => {
+  if (wantsPlay) tryResume();
+});
 
-// Periodic watchdog — catches edge cases where events don't fire
 setInterval(() => {
   if (wantsPlay && audio.paused) tryResume();
 }, 3000);

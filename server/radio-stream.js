@@ -40,20 +40,53 @@ class RadioStreamManager extends EventEmitter {
     res.end(playlist);
   }
 
-  // ── MP3 Segment (/hls/segment_N.mp3) ──────────────────────────────────────
+  // ── AAC / MP3 Segment (/hls/segment_N.aac or /hls/segment_N.mp3) ────────
   handleHlsSegment(req, res, segmentId) {
-    const buffer = this.audioEngine.getHlsSegment(segmentId);
+    const cleanId = String(segmentId).replace(/\.(aac|mp3)$/i, '');
+    const buffer  = this.audioEngine.getHlsSegment(cleanId);
     if (!buffer) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       return res.end('Segment not found');
     }
+    const isAac = req.url.includes('.aac') || !req.url.includes('.mp3');
     res.writeHead(200, {
-      'Content-Type':   'audio/mpeg',
+      'Content-Type':   isAac ? 'audio/aac' : 'audio/mpeg',
       'Content-Length': buffer.length,
       'Cache-Control':  'public, max-age=10',
       'Access-Control-Allow-Origin': '*'
     });
     res.end(buffer);
+  }
+
+  // ── Direct Continuous Audio Stream (/stream) ──────────────────────────────
+  handleDirectStream(req, res) {
+    res.writeHead(200, {
+      'Content-Type':      'audio/aac',
+      'Cache-Control':     'no-cache, no-store, must-revalidate',
+      'Connection':        'keep-alive',
+      'Transfer-Encoding': 'chunked',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    // Send initial buffer immediately
+    const initialBuf = this.audioEngine._segmentBuffer;
+    if (initialBuf) res.write(initialBuf);
+
+    // Stream subsequent segments as they are committed
+    const onSegment = (seq) => {
+      try {
+        const buf = this.audioEngine.getHlsSegment(seq);
+        if (buf) res.write(buf);
+      } catch (_) {
+        this.audioEngine.removeListener('segment', onSegment);
+      }
+    };
+
+    this.audioEngine.on('segment', onSegment);
+    req.on('close', () => {
+      this.audioEngine.removeListener('segment', onSegment);
+      res.end();
+    });
   }
 
   // ── Server-Sent Events (/api/events) ──────────────────────────────────────

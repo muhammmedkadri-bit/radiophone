@@ -28,13 +28,16 @@ async function main() {
 
   // ── HLS Live Playlist ──────────────────────────────────────────────────────
   // All common HLS URL patterns — media players and browsers use different ones
-  const HLS_ROUTES = ['/hls/live', '/hls/live.m3u8', '/live', '/live.m3u8', '/stream', '/radio.m3u8'];
+  const HLS_ROUTES = ['/hls/live', '/hls/live.m3u8', '/live', '/live.m3u8', '/radio.m3u8'];
   app.get(HLS_ROUTES, (req, res) => streamManager.handleHlsPlaylist(req, res));
 
-  // ── HLS MP3 Segments ───────────────────────────────────────────────────────
-  app.get('/hls/segment_:id.mp3', (req, res) =>
+  // ── HLS Segments (.aac and .mp3) ──────────────────────────────────────────
+  app.get(['/hls/segment_:id.aac', '/hls/segment_:id.mp3', '/hls/segment_:id'], (req, res) =>
     streamManager.handleHlsSegment(req, res, req.params.id)
   );
+
+  // ── Direct Continuous Audio Stream ────────────────────────────────────────
+  app.get('/stream', (req, res) => streamManager.handleDirectStream(req, res));
 
   // ── Root: smart dispatch ───────────────────────────────────────────────────
   // Native media players (AVPlayer, VLC) hit "/" — serve HLS playlist directly
