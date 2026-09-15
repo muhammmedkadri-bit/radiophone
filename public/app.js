@@ -72,6 +72,11 @@ function initStream() {
     hlsInstance.loadSource(HLS_URL);
     hlsInstance.attachMedia(audio);
 
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+      console.log('[Radiophone] HLS manifest parsed, ready to play');
+      if (wantsPlay) audio.play().catch(() => {});
+    });
+
     hlsInstance.on(Hls.Events.ERROR, (event, data) => {
       console.warn('[Radiophone] Hls.js error:', data.type, data.details);
       if (data.fatal) {
@@ -164,6 +169,19 @@ powerBtn.addEventListener('click', () => {
 // ── Audio Element Events ─────────────────────────────────────────────────────
 audio.addEventListener('playing', () => {
   if (wantsPlay) setUI('active');
+});
+
+// timeupdate fires as audio stream advances — failsafe for active state
+audio.addEventListener('timeupdate', () => {
+  if (wantsPlay && !powerBtn.classList.contains('active')) {
+    setUI('active');
+  }
+});
+
+audio.addEventListener('canplay', () => {
+  if (wantsPlay) {
+    audio.play().catch(() => {});
+  }
 });
 
 audio.addEventListener('pause', () => {
